@@ -1,4 +1,4 @@
-package company;
+package company.Utils;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;

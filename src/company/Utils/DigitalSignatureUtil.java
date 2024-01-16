@@ -1,8 +1,8 @@
-package company;
+package company.Utils;
 import java.security.*;
 import java.util.Base64;
 
-public class DigitalSignature {
+public class DigitalSignatureUtil {
     public static String generateSignature(String data, PrivateKey privateKey) {
         try {
             Signature sig = Signature.getInstance("SHA256withRSA");

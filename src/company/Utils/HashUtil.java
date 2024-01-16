@@ -1,7 +1,7 @@
-package company;
+package company.Utils;
 import java.security.NoSuchAlgorithmException;
 import java.security.MessageDigest;
-public class Hash {
+public class HashUtil {
     public static String hashPassword(String password) throws NoSuchAlgorithmException {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         byte[] hashedBytes = md.digest(password.getBytes());

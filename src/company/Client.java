@@ -1,4 +1,7 @@
 package company;
+import company.Utils.*;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.json.JSONObject;
 import javax.crypto.SecretKey;
 import java.io.*;
@@ -6,11 +9,11 @@ import java.net.Socket;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.Security;
+import java.security.cert.X509Certificate;
 import java.util.Scanner;
 
-
-
-public class DateClient {
+public class Client {
     private static final String SERVER_ADDRESS = "127.0.0.1";
     private static final int SERVER_PORT = 11111;
     private Socket socket;
@@ -26,7 +29,7 @@ public class DateClient {
     String role = "";
 
     public static void main(String[] args) throws Exception {
-        DateClient client = new DateClient();
+        Client client = new Client();
         client.runClient();
     }
     private void runClient() {
@@ -70,14 +73,16 @@ public class DateClient {
         String res = (String) objectIn.readObject();
         JSONObject resJson = new JSONObject(res);
         System.out.println("status : " + resJson.getString("status") + "\nmessage : " + resJson.getString("message"));
-
+//        // Storing keys to files
+//        Files.write(Paths.get("client_public_key.der"), clientPublicKey.getEncoded());
+//        Files.write(Paths.get("client_private_key.der"), clientPrivateKey.getEncoded());
     }
     private void performLogin() throws IOException, ClassNotFoundException, NoSuchAlgorithmException {
         System.out.print("Enter your name: ");
         name = scanner.next();
         System.out.print("Enter your password: ");
         password = scanner.next();
-        String hashedPassword = Hash.hashPassword(password);
+        String hashedPassword = HashUtil.hashPassword(password);
         System.out.print("Enter your role(s for student, d for doctor): ");
         role = scanner.next();
 
@@ -96,13 +101,14 @@ public class DateClient {
             System.out.println("Invalid name or password");
         }
     }
-    private void showMenu() throws IOException {
+    private void showMenu() throws Exception {
         while (true) {
             System.out.println("1 - Add Number");
             System.out.println("2 - Send Message");
             System.out.println("3 - End Program");
             if (role.equals("d")){
                 System.out.println("4 - Add Marks");
+                System.out.println("5 - Show Marks");
             }
             int choice = scanner.nextInt();
 
@@ -118,6 +124,9 @@ public class DateClient {
                     return;
                 case 4:
                     addMarks();
+                    break;
+                case 5:
+                    showMarks();
                     break;
                 default:
                     System.out.println("Invalid option.");
@@ -222,7 +231,7 @@ public class DateClient {
             addMarks.put("marks", marks);
 
             // Generate digital signature
-            String signature = DigitalSignature.generateSignature(addMarks.toString(), clientPrivateKey);
+            String signature = DigitalSignatureUtil.generateSignature(addMarks.toString(), clientPrivateKey);
             objectOut.writeObject(addMarks.toString());
             objectOut.writeUTF(signature);
             objectOut.flush();
@@ -243,6 +252,67 @@ public class DateClient {
 
     }
 
+    private void showMarks() {
+        try {
+            byte[] signedCertificate = getSignedCertificate();
+            //connect back to the server
+            System.out.println("Enter Student Name: ");
+            scanner.nextLine();
+            String studentName = scanner.nextLine();
+            JSONObject showMarks = new JSONObject();
+            showMarks.put("action", "showMarks");
+            showMarks.put("student_name", studentName);
+            objectOut.writeObject(showMarks.toString());
+            objectOut.flush();
+            objectOut.writeObject(signedCertificate);
+            objectOut.flush();
+            //receive response
+            String marks = objectIn.readUTF();
+            System.out.println(studentName + " marks: " + marks);
+        }catch (Exception e){
+            System.out.println(e.getMessage());
+            e.printStackTrace();
+        }
+
+    }
+
+    private byte[] getSignedCertificate(){
+        try{
+            // Add the Bouncy Castle Provider
+            Security.addProvider(new BouncyCastleProvider());
+            // Generate the CSR
+            PKCS10CertificationRequest csr = CertificateUtil.generateCSR(clientPublicKey, clientPrivateKey, "CN=Doctor, O=Damascus University, L=Damascus, ST=Damascus, C=Syria");
+            // connect to CA
+            Socket caSocket = new Socket("127.0.0.1", 22222);
+            ObjectOutputStream objectOut = new ObjectOutputStream(caSocket.getOutputStream());
+            ObjectInputStream objectIn = new ObjectInputStream(caSocket.getInputStream());
+            // send CSR
+            byte[] csrBytes = csr.getEncoded();
+            objectOut.writeObject(csrBytes);
+            objectOut.flush();
+            //receive the math equation
+            String mathEquation = objectIn.readUTF();
+            System.out.println(mathEquation);
+            int solution = scanner.nextInt();
+            objectOut.writeUTF(String.valueOf(solution));
+            objectOut.flush();
+            //receive auth result
+            System.out.println(objectIn.readUTF());
+            //receive certificate
+            byte[] receivedCertificateBytes = (byte[]) objectIn.readObject();
+            X509Certificate receivedCertificate = CertificateUtil.convertBytesToX509Certificate(receivedCertificateBytes);
+            System.out.println("Received Certificate: " + receivedCertificate);
+            // Close the connection with CA
+            caSocket.close();
+            objectOut.close();
+            objectIn.close();
+            return receivedCertificateBytes;
+        } catch (Exception e) {
+            System.out.println("Error connecting to CA: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
 
 }
 

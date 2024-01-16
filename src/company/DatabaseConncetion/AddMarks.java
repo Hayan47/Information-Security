@@ -1,4 +1,4 @@
-package company;
+package company.DatabaseConncetion;
 import org.json.JSONObject;
 
 import java.sql.*;

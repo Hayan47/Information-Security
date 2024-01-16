@@ -1,13 +1,17 @@
 package company;
+import company.DatabaseConncetion.*;
+import company.Utils.*;
 import org.json.JSONObject;
 import javax.crypto.SecretKey;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;;
 
@@ -129,6 +133,9 @@ public class MultiClientServer {
                         case "addMarks":
                             processAddMarks(requestJson);
                             break;
+                        case "showMarks":
+                            processShowMarks(requestJson);
+                            break;
                         default:
                             System.err.println("Unknown action: " + action);
                     }
@@ -208,12 +215,46 @@ public class MultiClientServer {
             String studentName = requestJson.getString("student_name");
             String marks = requestJson.getString("marks");
             String signature = objectIn.readUTF();
-            boolean verified = DigitalSignature.verifySignature(requestJson.toString(), signature, clientPublicKey);
+            boolean verified = DigitalSignatureUtil.verifySignature(requestJson.toString(), signature, clientPublicKey);
             if (verified){
                 AddMarks add = new AddMarks();
                 String addResult = add.addMarks(studentName, marks);
                 objectOut.writeObject(addResult);
             }
+        }
+
+        private void processShowMarks(JSONObject requestJson) throws Exception {
+            String studentName = requestJson.getString("student_name");
+            byte[] receivedCertificateBytes = (byte[]) objectIn.readObject();
+            // Convert the byte array back to an X509Certificate
+            X509Certificate receivedCertificate = CertificateUtil.convertBytesToX509Certificate(receivedCertificateBytes);
+            // Verify the received certificate
+            PublicKey caPublicKey = getCaPublicKey();
+            boolean verified = CertificateUtil.verifyCertificate(receivedCertificate, caPublicKey);
+            if(verified){
+                GetMarks getMarks = new GetMarks();
+                String marks = getMarks.getMarks(studentName);
+                objectOut.writeUTF(marks);
+                objectOut.flush();
+            }else{
+                objectOut.writeUTF("NOT VERIFIED");
+                objectOut.flush();
+            }
+        }
+
+        private PublicKey getCaPublicKey() throws Exception {
+            KeyStore keyStore = KeyStore.getInstance("JKS");
+            char[] password = "Hayan".toCharArray();
+            try (FileInputStream fis = new FileInputStream("CAkeystore.jks")) {
+                keyStore.load(fis, password);
+            }
+            // Retrieve the CA's public key from the keystore
+            String alias = "alias"; // Use the alias you used when storing the key pair in the keystore
+            Certificate certificate = keyStore.getCertificate(alias);
+            PublicKey caPublicKey = certificate.getPublicKey();
+            // For example, you can print the encoded form of the public key
+            System.out.println("CA's Public Key: " + java.util.Base64.getEncoder().encodeToString(caPublicKey.getEncoded()));
+            return caPublicKey;
         }
     }
 }
