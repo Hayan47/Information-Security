@@ -15,35 +15,6 @@ This repository contains a simple Java project demonstrating a secure server imp
 
 ## Getting Started
 
--- Connect to the MySQL Server on port 3306
--- Make sure XAMPP is running and MySQL is started
-
--- Create the "iss1" database
-CREATE DATABASE IF NOT EXISTS iss1;
-USE iss1;
-
--- Create the "user" table
-CREATE TABLE IF NOT EXISTS user (
-    name VARCHAR(20),
-    password TEXT(50),
-    number INT,
-    role ENUM('student', 'doctor')
-);
-
--- Create the "message" table
-CREATE TABLE IF NOT EXISTS message (
-    name VARCHAR(20),
-    message TEXT(100)
-);
-
--- Create the "marks" table
-CREATE TABLE IF NOT EXISTS marks (
-    student_name VARCHAR(20),
-    marks TEXT(100),
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 1. Clone the repository to your local machine:
 
     ```bash
@@ -56,6 +27,55 @@ CREATE TABLE IF NOT EXISTS marks (
 
 4. Run the client
 
+
+## MySQL Server Configuration
+
+To set up the MySQL server on port 3306 using XAMPP:
+
+1. Make sure XAMPP is installed and MySQL is started.
+2. Open a MySQL client, such as phpMyAdmin.
+3. Copy and paste the following SQL statements into the SQL query editor.
+4. Execute the SQL statements.
+
+### Create "iss1" Database
+
+```sql
+CREATE DATABASE IF NOT EXISTS iss1;
+USE iss1;
+```
+
+### Create user Table
+
+```sql
+CREATE TABLE IF NOT EXISTS user (
+    name VARCHAR(20),
+    password TEXT(50),
+    number INT,
+    role ENUM('student', 'doctor')
+);
+```
+
+
+### Create message Table
+
+```sql
+CREATE TABLE IF NOT EXISTS message (
+    name VARCHAR(20),
+    message TEXT(100)
+);
+```
+
+
+### Create marks Table
+
+```sql
+CREATE TABLE IF NOT EXISTS marks (
+    student_name VARCHAR(20),
+    marks TEXT(100),
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
 
 ## Usage
 
